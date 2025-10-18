@@ -6,7 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import Icon from '@/components/ui/icon';
+import AuthDialog from '@/components/AuthDialog';
+import UserProfile from '@/components/UserProfile';
 
 interface Topic {
   id: number;
@@ -51,6 +54,9 @@ const Index = () => {
 
   const [newTopic, setNewTopic] = useState({ title: '', content: '' });
   const [onlinePlayers] = useState(127);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   const stats = {
     totalPlayers: 1547,
@@ -59,11 +65,15 @@ const Index = () => {
   };
 
   const handleCreateTopic = () => {
+    if (!currentUser) {
+      setIsAuthOpen(true);
+      return;
+    }
     if (newTopic.title && newTopic.content) {
       const topic: Topic = {
         id: topics.length + 1,
         title: newTopic.title,
-        author: 'Гость',
+        author: currentUser,
         replies: 0,
         views: 0,
         category: 'faq',
@@ -72,6 +82,15 @@ const Index = () => {
       setTopics([topic, ...topics]);
       setNewTopic({ title: '', content: '' });
     }
+  };
+
+  const handleLogin = (username: string) => {
+    setCurrentUser(username);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setShowProfile(false);
   };
 
   const faqData = [
@@ -124,16 +143,54 @@ const Index = () => {
                 <div className="w-2 h-2 bg-green-500 rounded-full pulse-slow"></div>
                 <span className="text-sm font-medium">{onlinePlayers} онлайн</span>
               </div>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Icon name="LogIn" size={18} className="mr-2" />
-                Войти
-              </Button>
+              {currentUser ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Icon name="User" size={18} />
+                      {currentUser}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => { setShowProfile(true); }}>
+                      <Icon name="UserCircle" size={16} className="mr-2" />
+                      Мой профиль
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Icon name="Settings" size={16} className="mr-2" />
+                      Настройки
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                      <Icon name="LogOut" size={16} className="mr-2" />
+                      Выйти
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsAuthOpen(true)}>
+                  <Icon name="LogIn" size={18} className="mr-2" />
+                  Войти
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {showProfile && currentUser ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold">Профиль игрока</h1>
+              <Button variant="outline" onClick={() => setShowProfile(false)}>
+                <Icon name="ArrowLeft" size={18} className="mr-2" />
+                Назад к форуму
+              </Button>
+            </div>
+            <UserProfile username={currentUser} />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <Card className="hover-scale animate-fade-in border-primary/20">
             <CardHeader className="pb-3">
@@ -408,7 +465,10 @@ const Index = () => {
             </div>
           </TabsContent>
         </Tabs>
+        )}
       </main>
+
+      <AuthDialog open={isAuthOpen} onOpenChange={setIsAuthOpen} onLogin={handleLogin} />
 
       <footer className="border-t border-border bg-card/50 mt-12">
         <div className="container mx-auto px-4 py-8">
